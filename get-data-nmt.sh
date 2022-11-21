@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-set -e
+set -ex
 
 
 #
@@ -212,7 +212,7 @@ cd $MONO_PATH
 
 # decompress monolingual data
 for FILENAME in $SRC/news*gz $TGT/news*gz; do
-  OUTPUT="${FILENAME::-3}"
+  OUTPUT="${FILENAME::%???}"
   if [ ! -f "$OUTPUT" ]; then
     echo "Decompressing $FILENAME..."
     gunzip -k $FILENAME
