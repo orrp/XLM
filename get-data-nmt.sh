@@ -212,7 +212,7 @@ cd $MONO_PATH
 
 # decompress monolingual data
 for FILENAME in $SRC/news*gz $TGT/news*gz; do
-  OUTPUT="${FILENAME::%???}"
+  OUTPUT="${FILENAME%???}"
   if [ ! -f "$OUTPUT" ]; then
     echo "Decompressing $FILENAME..."
     gunzip -k $FILENAME
