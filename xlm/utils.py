@@ -119,11 +119,16 @@ def get_dump_path(params):
         subprocess.Popen("mkdir -p %s" % params.dump_path, shell=True).wait()
 
 
-def to_cuda(*args):
-    """
-    Move tensors to CUDA.
-    """
-    return [None if x is None else x.cuda() for x in args]
+def all_to(device, *args):
+    return [None if x is None else x.to(device) for x in args]
+
+
+# This is deprecated and in particular hard to adapt to mps, so commenting out. ~orrp
+# def to_cuda(*args):
+#     """
+#     Move tensors to CUDA.
+#     """
+#     return [None if x is None else x.cuda() for x in args]
 
 
 def restore_segmentation(path):

@@ -206,11 +206,15 @@ def get_parser():
     parser.add_argument("--debug", help="Enable all debug flags",
                         action="store_true")
 
-    # multi-gpu / multi-node
+    # # multi-gpu / multi-node
     parser.add_argument("--local_rank", type=int, default=-1,
                         help="Multi-GPU - Local rank")
     parser.add_argument("--master_port", type=int, default=-1,
                         help="Master port (for multi-node SLURM jobs)")
+
+    # mps vs. cuda
+    parser.add_argument("--device", type=str, default="mps", choices=["mps", "cuda"],
+                        help="Use MPS (M1 architecture) or CUDA.")
 
     return parser
 

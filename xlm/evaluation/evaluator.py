@@ -12,7 +12,7 @@ from collections import OrderedDict
 import numpy as np
 import torch
 
-from ..utils import to_cuda, restore_segmentation, concat_batches
+from ..utils import all_to, restore_segmentation, concat_batches
 from ..model.memory import HashingMemory
 
 
@@ -87,6 +87,9 @@ class Evaluator(object):
         """
         Initialize evaluator.
         """
+
+        self.device = torch.device(params.device)
+
         self.trainer = trainer
         self.data = data
         self.dico = data['dico']
@@ -461,7 +464,7 @@ class EncDecEvaluator(Evaluator):
             assert len(y) == (len2 - 1).sum().item()
 
             # cuda
-            # x1, len1, langs1, x2, len2, langs2, y = to_cuda(x1, len1, langs1, x2, len2, langs2, y) # TODO orrp mps
+            x1, len1, langs1, x2, len2, langs2, y = all_to(self.device, x1, len1, langs1, x2, len2, langs2, y) # TODO orrp mps
 
             # encode source sentence
             enc1 = encoder('fwd', x=x1, lengths=len1, langs=langs1, causal=False)
