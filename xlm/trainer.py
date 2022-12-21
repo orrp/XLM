@@ -766,7 +766,7 @@ class Trainer(object):
         x, lengths, positions, langs, new_idx = self.round_batch(x, lengths, positions, langs)
         if new_idx is not None:
             y = y[new_idx]
-        # x, lengths, positions, langs = all_to(self.device, x, lengths, positions, langs) # TODO orrp mps
+        x, lengths, positions, langs = all_to(self.device, x, lengths, positions, langs) # TODO orrp mps
 
         # get sentence embeddings
         h = model('fwd', x=x, lengths=lengths, positions=positions, langs=langs, causal=False)[0]
@@ -848,7 +848,7 @@ class EncDecTrainer(Trainer):
         assert len(y) == (len2 - 1).sum().item()
 
         # cuda
-        # x1, len1, langs1, x2, len2, langs2, y = all_to(self.device, x1, len1, langs1, x2, len2, langs2, y) # TODO orrp mps
+        x1, len1, langs1, x2, len2, langs2, y = all_to(self.device, x1, len1, langs1, x2, len2, langs2, y) # TODO orrp mps
 
         # encode source sentence
         enc1 = self.encoder('fwd', x=x1, lengths=len1, langs=langs1, causal=False)
@@ -890,7 +890,7 @@ class EncDecTrainer(Trainer):
         langs1 = x1.clone().fill_(lang1_id)
 
         # cuda
-        # x1, len1, langs1 = all_to(self.device, x1, len1, langs1) # TODO orrp mps
+        x1, len1, langs1 = all_to(self.device, x1, len1, langs1) # TODO orrp mps
 
         # generate a translation
         with torch.no_grad():

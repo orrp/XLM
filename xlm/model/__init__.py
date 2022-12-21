@@ -86,7 +86,7 @@ def check_model_params(params):
             assert all([x == '' or os.path.isfile(x) for x in s])
 
 
-def set_pretrain_emb(model, dico, word2id, embeddings):
+def set_pretrain_emb(model, dico, word2id, embeddings, device):
     """
     Pretrain word embeddings.
     """
@@ -97,8 +97,8 @@ def set_pretrain_emb(model, dico, word2id, embeddings):
             if idx is None:
                 continue
             n_found += 1
-            model.embeddings.weight[i] = embeddings[idx].cuda()
-            model.pred_layer.proj.weight[i] = embeddings[idx].cuda()
+            model.embeddings.weight[i] = embeddings[idx].to(device)
+            model.pred_layer.proj.weight[i] = embeddings[idx].to(device)
     logger.info("Pretrained %i/%i words (%.3f%%)."
                 % (n_found, len(dico), 100. * n_found / len(dico)))
 
@@ -114,7 +114,7 @@ def build_model(params, dico):
         # reload pretrained word embeddings
         if params.reload_emb != '':
             word2id, embeddings = load_embeddings(params.reload_emb, params)
-            set_pretrain_emb(model, dico, word2id, embeddings)
+            set_pretrain_emb(model, dico, word2id, embeddings, params.device)
 
         # reload a pretrained model
         if params.reload_model != '':
@@ -138,7 +138,7 @@ def build_model(params, dico):
         logger.info("Model: {}".format(model))
         logger.info("Number of parameters (model): %i" % sum([p.numel() for p in model.parameters() if p.requires_grad]))
 
-        return model.cuda()
+        return model.to(params.device)
 
     else:
         # build
@@ -148,8 +148,8 @@ def build_model(params, dico):
         # reload pretrained word embeddings
         if params.reload_emb != '':
             word2id, embeddings = load_embeddings(params.reload_emb, params)
-            set_pretrain_emb(encoder, dico, word2id, embeddings)
-            set_pretrain_emb(decoder, dico, word2id, embeddings)
+            set_pretrain_emb(encoder, dico, word2id, embeddings, params.device)
+            set_pretrain_emb(decoder, dico, word2id, embeddings, params.device)
 
         # reload a pretrained model
         if params.reload_model != '':
@@ -186,5 +186,4 @@ def build_model(params, dico):
         logger.info("Number of parameters (encoder): %i" % sum([p.numel() for p in encoder.parameters() if p.requires_grad]))
         logger.info("Number of parameters (decoder): %i" % sum([p.numel() for p in decoder.parameters() if p.requires_grad]))
 
-        return encoder, decoder
-        # return encoder.cuda(), decoder.cuda() # TODO orrp mps
+        return encoder.to(params.device), decoder.to(params.device)  # TODO orrp mps

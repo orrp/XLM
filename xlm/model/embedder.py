@@ -72,6 +72,9 @@ class SentenceEmbedder(object):
     def cuda(self):
         self.model.cuda()
 
+    def to(self, device):
+        self.model.to(device)
+
     def get_parameters(self, layer_range):
 
         s = layer_range.split(':')
