@@ -15,7 +15,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from torch.nn.utils import clip_grad_norm_
-import apex
+# import apex # TODO orrp check if on slurm before importing?
 
 from .optim import get_optimizer
 from .utils import to_cuda, concat_batches, find_modules
