@@ -354,7 +354,8 @@ class TransformerModel(nn.Module):
         # generate masks
         mask, attn_mask = get_masks(slen, lengths, causal)
         if self.is_decoder and src_enc is not None:
-            src_mask = torch.arange(src_len.max(), dtype=torch.long, device=lengths.device) < src_len[:, None]
+            src_len_max = src_len.int().max()  # workaround a torch bug https://github.com/pytorch/pytorch/issues/90273
+            src_mask = torch.arange(src_len_max, dtype=torch.long, device=lengths.device) < src_len[:, None]
 
         # positions
         if positions is None:
@@ -522,7 +523,8 @@ class TransformerModel(nn.Module):
             generated[-1].masked_fill_(unfinished_sents.byte(), self.eos_index)
 
         # sanity check
-        assert (generated == self.eos_index).sum() == 2 * bs
+        assert (generated == self.eos_index).sum() == bs  # TODO orrp
+        # assert (generated == self.eos_index).sum() == 2 * bs
 
         return generated[:cur_len], gen_len
 
