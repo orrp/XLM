@@ -439,7 +439,7 @@ class TransformerModel(nn.Module):
         scores, loss = self.pred_layer(masked_tensor, y, get_scores)
         return scores, loss
 
-    def generate(self, src_enc, src_len, tgt_lang_id, max_len=200, sample_temperature=None):
+    def generate(self, src_enc, src_len, tgt_lang_id, max_len=200, sample_temperature=None, ids2words=None):
         """
         Decode a sentence given initial start.
         `x`:

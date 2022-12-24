@@ -26,6 +26,13 @@ DUMP_PATH = '/checkpoint/%s/dumped' % getpass.getuser()
 DYNAMIC_COEFF = ['lambda_clm', 'lambda_mlm', 'lambda_pc', 'lambda_ae', 'lambda_mt', 'lambda_bt']
 
 
+
+def vectorized_id2word(id2word):
+    def id2word_func(id):
+        return id2word[id]
+    return np.vectorize(id2word_func)
+
+
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
