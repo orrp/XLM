@@ -26,7 +26,7 @@ from .model.transformer import TransformerFFN
 
 logger = getLogger()
 
-from .utils import DTYPE
+from .utils import DTYPE, vectorized_id2word
 
 
 class Trainer(object):
@@ -904,7 +904,8 @@ class EncDecTrainer(Trainer):
             # encode source sentence and translate it
             enc1 = _encoder('fwd', x=x1, lengths=len1, langs=langs1, causal=False)
             enc1 = enc1.transpose(0, 1)
-            x2, len2 = _decoder.generate(enc1, len1, lang2_id, max_len=int(1.3 * len1.max().item() + 5))
+            x2, len2 = _decoder.generate(enc1, len1, lang2_id, max_len=int(1.3 * len1.max().item() + 5),
+                                         ids2words=self.id_tensor2words)
             langs2 = x2.clone().fill_(lang2_id)
 
             # free CUDA memory
@@ -938,3 +939,7 @@ class EncDecTrainer(Trainer):
         self.n_sentences += params.batch_size
         self.stats['processed_s'] += len1.size(0)
         self.stats['processed_w'] += (len1 - 1).sum().item()
+
+    def id_tensor2words(self, id_tensor):
+        v = vectorized_id2word(self.data['dico'].id2word)
+        return v(np.array(id_tensor.to('cpu')))
