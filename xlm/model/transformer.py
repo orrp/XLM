@@ -14,6 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .memory import HashingMemory
+from ..utils import DTYPE
 
 
 N_MAX_POSITIONS = 512  # maximum input sequence length
@@ -85,7 +86,7 @@ def get_masks(slen, lengths, causal):
     """
     assert lengths.max().item() <= slen
     bs = lengths.size(0)
-    alen = torch.arange(slen, dtype=torch.long, device=lengths.device)
+    alen = torch.arange(slen, dtype=DTYPE, device=lengths.device)  # TODO cl arg
     mask = alen < lengths[:, None]
 
     # attention mask is the same as mask, or triangular inferior attention (causal)
@@ -355,11 +356,11 @@ class TransformerModel(nn.Module):
         mask, attn_mask = get_masks(slen, lengths, causal)
         if self.is_decoder and src_enc is not None:
             src_len_max = src_len.int().max()  # workaround a torch bug https://github.com/pytorch/pytorch/issues/90273
-            src_mask = torch.arange(src_len_max, dtype=torch.long, device=lengths.device) < src_len[:, None]
+            src_mask = torch.arange(src_len_max, dtype=DTYPE, device=lengths.device) < src_len[:, None]  # TODO cl arg
 
         # positions
         if positions is None:
-            positions = x.new(slen).long()
+            positions = x.new(slen).to(dtype=DTYPE)  # TODO cl arg
             positions = torch.arange(slen, out=positions).unsqueeze(0)
         else:
             assert positions.size() == (slen, bs)
@@ -468,11 +469,11 @@ class TransformerModel(nn.Module):
         generated[0].fill_(self.eos_index)    # we use <EOS> for <BOS> everywhere
 
         # positions
-        positions = src_len.new(max_len).long()
+        positions = src_len.new(max_len).to(dtype=DTYPE)  # TODO cl arg
         positions = torch.arange(max_len, out=positions).unsqueeze(1).expand(max_len, bs)
 
         # language IDs
-        langs = src_len.new(max_len).long().fill_(tgt_lang_id)
+        langs = src_len.new(max_len).to(dtype=DTYPE).fill_(tgt_lang_id)  # TODO cl arg
         langs = langs.unsqueeze(1).expand(max_len, bs)
 
         # current position / max lengths / length of generated sentences / unfinished sentences
@@ -511,7 +512,7 @@ class TransformerModel(nn.Module):
             # update generations / lengths / finished sentences / current length
             generated[cur_len] = next_words * unfinished_sents + self.pad_index * (1 - unfinished_sents)
             gen_len.add_(unfinished_sents)
-            unfinished_sents.mul_(next_words.ne(self.eos_index).long())
+            unfinished_sents.mul_(next_words.ne(self.eos_index).to(dtype=DTYPE))
             cur_len = cur_len + 1
 
             # stop when there is a </s> in each sentence, or if we exceed the maximul length
@@ -567,7 +568,7 @@ class TransformerModel(nn.Module):
         generated_hyps = [BeamHypotheses(beam_size, max_len, length_penalty, early_stopping) for _ in range(bs)]
 
         # positions
-        positions = src_len.new(max_len).long()
+        positions = src_len.new(max_len).to(dtype=DTYPE)  # TODO cl arg
         positions = torch.arange(max_len, out=positions).unsqueeze(1).expand_as(generated)
 
         # language IDs

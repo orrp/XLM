@@ -463,7 +463,9 @@ class Trainer(object):
         _x_rand = _x_real.clone().random_(params.n_words)
         _x_mask = _x_real.clone().fill_(params.mask_index)
         probs = torch.multinomial(params.pred_probs, len(_x_real), replacement=True)
-        _x = _x_mask * (probs == 0).long() + _x_real * (probs == 1).long() + _x_rand * (probs == 2).long()
+        _x = _x_mask * (probs == 0).to(dtype=DTYPE) +\
+             _x_real * (probs == 1).to(dtype=DTYPE) +\
+             _x_rand * (probs == 2).to(dtype=DTYPE)  # TODO make cl arg
         x = x.masked_scatter(pred_mask, _x)
 
         assert 0 <= x.min() <= x.max() < params.n_words
@@ -760,7 +762,7 @@ class Trainer(object):
         y = torch.tensor(bs, dtype=DTYPE).random_(2)
         idx_pos = torch.arange(bs)
         idx_neg = ((idx_pos + torch.tensor(bs, dtype=DTYPE).random_(1, bs)) % bs)
-        idx = (y == 1).long() * idx_pos + (y == 0).long() * idx_neg
+        idx = (y == 1).to(dtype=DTYPE) * idx_pos + (y == 0).to(dtype=DTYPE) * idx_neg  # TODO make cl arg
         x2, len2 = x2[:, idx], len2[idx]
 
         # generate batch / cuda
