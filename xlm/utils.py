@@ -25,6 +25,7 @@ TRUTHY_STRINGS = {'on', 'true', '1'}
 DUMP_PATH = '/checkpoint/%s/dumped' % getpass.getuser()
 DYNAMIC_COEFF = ['lambda_clm', 'lambda_mlm', 'lambda_pc', 'lambda_ae', 'lambda_mt', 'lambda_bt']
 
+DTYPE = torch.int32
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):

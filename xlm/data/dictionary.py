@@ -207,7 +207,7 @@ class Dictionary(object):
         f.close()
 
         # tensorize data
-        positions = np.int64(positions)
+        positions = np.int32(positions)  # TODO make cl arg
         if len(dico) < 1 << 16:
             sentences = np.uint16(sentences)
         elif len(dico) < 1 << 31:

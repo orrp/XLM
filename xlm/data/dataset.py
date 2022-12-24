@@ -10,6 +10,8 @@ import math
 import numpy as np
 import torch
 
+from ..utils import DTYPE
+
 
 logger = getLogger()
 
@@ -41,7 +43,7 @@ class StreamDataset(object):
         self.n_tokens = n_tokens
         self.n_batches = n_batches
         self.n_sentences = len(pos)
-        self.lengths = torch.LongTensor(bs).fill_(bptt)
+        self.lengths = torch.full((bs,), fill_value=bptt, dtype=DTYPE)
 
     def __len__(self):
         """
@@ -72,7 +74,7 @@ class StreamDataset(object):
         for i in indexes:
             a = self.bptt * i
             b = self.bptt * (i + 1)
-            yield torch.from_numpy(self.data[a:b].astype(np.int64)), self.lengths
+            yield torch.from_numpy(self.data[a:b].astype(np.int32)), self.lengths  # TODO make cl arg
 
 
 class Dataset(object):
@@ -119,13 +121,13 @@ class Dataset(object):
         sentence, and a vector lengths containing the length of each sentence.
         """
         # sentences = sorted(sentences, key=lambda x: len(x), reverse=True)
-        lengths = torch.LongTensor([len(s) + 2 for s in sentences])
-        sent = torch.LongTensor(lengths.max().item(), lengths.size(0)).fill_(self.pad_index)
+        lengths = torch.tensor([len(s) + 2 for s in sentences], dtype=DTYPE)
+        sent = torch.full((lengths.max().item(), lengths.size(0)), fill_value=self.pad_index, dtype=DTYPE)
 
         sent[0] = self.eos_index
         for i, s in enumerate(sentences):
             if lengths[i] > 2:  # if sentence not empty
-                sent[1:lengths[i] - 1, i].copy_(torch.from_numpy(s.astype(np.int64)))
+                sent[1:lengths[i] - 1, i].copy_(torch.from_numpy(s.astype(np.int32)))  # TODO make cl arg
             sent[lengths[i] - 1, i] = self.eos_index
 
         return sent, lengths

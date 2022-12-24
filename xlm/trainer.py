@@ -26,6 +26,8 @@ from .model.transformer import TransformerFFN
 
 logger = getLogger()
 
+from .utils import DTYPE
+
 
 class Trainer(object):
 
@@ -379,10 +381,10 @@ class Trainer(object):
             sentences.append(new_s)
             lengths.append(len(new_s))
         # re-construct input
-        l2 = torch.LongTensor(lengths)
-        x2 = torch.LongTensor(l2.max(), l2.size(0)).fill_(self.params.pad_index)
+        l2 = torch.tensor(lengths, dtype=DTYPE)
+        x2 = torch.full((l2.max(), l2.size(0)), fill_value=self.params.pad_index, dtype=DTYPE)
         for i in range(l2.size(0)):
-            x2[:l2[i], i].copy_(torch.LongTensor(sentences[i]))
+            x2[:l2[i], i].copy_(torch.tensor(sentences[i], dtype=DTYPE))
         return x2, l2
 
     def word_blank(self, x, l):
@@ -409,9 +411,9 @@ class Trainer(object):
             assert len(new_s) == l[i] and new_s[0] == eos and new_s[-1] == eos
             sentences.append(new_s)
         # re-construct input
-        x2 = torch.LongTensor(l.max(), l.size(0)).fill_(self.params.pad_index)
+        x2 = torch.full((l.max(), l.size(0)), fill_value=self.params.pad_index, dtype=DTYPE)
         for i in range(l.size(0)):
-            x2[:l[i], i].copy_(torch.LongTensor(sentences[i]))
+            x2[:l[i], i].copy_(torch.tensor(sentences[i], dtype=DTYPE))
         return x2, l
 
     def add_noise(self, words, lengths):
@@ -646,7 +648,7 @@ class Trainer(object):
         if ml1 % 8 != 0:
             pad = 8 - (ml1 % 8)
             ml2 = ml1 + pad
-            x = torch.cat([x, torch.LongTensor(pad, bs2).fill_(params.pad_index)], 0)
+            x = torch.cat([x, torch.tensor(pad, bs2, dtype=DTYPE).fill_(params.pad_index)], 0)
             if positions is not None:
                 positions = torch.cat([positions, torch.arange(pad)[:, None] + positions[-1][None] + 1], 0)
             if langs is not None:
@@ -755,9 +757,9 @@ class Trainer(object):
             return
 
         # associate lang1 sentences with their translations, and random lang2 sentences
-        y = torch.LongTensor(bs).random_(2)
+        y = torch.tensor(bs, dtype=DTYPE).random_(2)
         idx_pos = torch.arange(bs)
-        idx_neg = ((idx_pos + torch.LongTensor(bs).random_(1, bs)) % bs)
+        idx_neg = ((idx_pos + torch.tensor(bs, dtype=DTYPE).random_(1, bs)) % bs)
         idx = (y == 1).long() * idx_pos + (y == 0).long() * idx_neg
         x2, len2 = x2[:, idx], len2[idx]
 
