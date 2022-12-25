@@ -219,26 +219,20 @@ def get_parser():
     return parser
 
 
-def main(params):
-
+def init_training(params):
     # initialize the multi-GPU / multi-node training
     init_distributed_mode(params)
-
     # initialize the experiment
     logger = initialize_exp(params)
-
     # initialize SLURM signal handler for time limit / pre-emption
     init_signal_handler()
-
     # load data
     data = load_data(params)
-
     # build model
     if params.encoder_only:
         model = build_model(params, data['dico'])
     else:
         encoder, decoder = build_model(params, data['dico'])
-
     # build trainer, reload potential checkpoints / build evaluator
     if params.encoder_only:
         trainer = SingleTrainer(model, data, params)
@@ -246,7 +240,6 @@ def main(params):
     else:
         trainer = EncDecTrainer(encoder, decoder, data, params)
         evaluator = EncDecEvaluator(trainer, data, params)
-
     # evaluation
     if params.eval_only:
         scores = evaluator.run_all_evals(trainer)
@@ -254,60 +247,53 @@ def main(params):
             logger.info("%s -> %.6f" % (k, v))
         logger.info("__log__:%s" % json.dumps(scores))
         exit()
-
     # set sampling probabilities for training
     set_sampling_probs(data, params)
+    return trainer, evaluator, logger
 
-    # language model training
-    for _ in range(params.max_epoch):
 
-        logger.info("============ Starting epoch %i ... ============" % trainer.epoch)
+def train(trainer, evaluator, logger, params):
+    logger.info("============ Starting epoch %i ... ============" % trainer.epoch)
+    trainer.n_sentences = 0
+    while trainer.n_sentences < trainer.epoch_size:
 
-        trainer.n_sentences = 0
+        # CLM steps
+        for lang1, lang2 in shuf_order(params.clm_steps, params):
+            trainer.clm_step(lang1, lang2, params.lambda_clm)
 
-        while trainer.n_sentences < trainer.epoch_size:
+        # MLM steps (also includes TLM if lang2 is not None)
+        for lang1, lang2 in shuf_order(params.mlm_steps, params):
+            trainer.mlm_step(lang1, lang2, params.lambda_mlm)
 
-            # CLM steps
-            for lang1, lang2 in shuf_order(params.clm_steps, params):
-                trainer.clm_step(lang1, lang2, params.lambda_clm)
+        # parallel classification steps
+        for lang1, lang2 in shuf_order(params.pc_steps, params):
+            trainer.pc_step(lang1, lang2, params.lambda_pc)
 
-            # MLM steps (also includes TLM if lang2 is not None)
-            for lang1, lang2 in shuf_order(params.mlm_steps, params):
-                trainer.mlm_step(lang1, lang2, params.lambda_mlm)
+        # denoising auto-encoder steps
+        for lang in shuf_order(params.ae_steps):
+            trainer.mt_step(lang, lang, params.lambda_ae)
 
-            # parallel classification steps
-            for lang1, lang2 in shuf_order(params.pc_steps, params):
-                trainer.pc_step(lang1, lang2, params.lambda_pc)
+        # machine translation steps
+        for lang1, lang2 in shuf_order(params.mt_steps, params):
+            trainer.mt_step(lang1, lang2, params.lambda_mt)
 
-            # denoising auto-encoder steps
-            for lang in shuf_order(params.ae_steps):
-                trainer.mt_step(lang, lang, params.lambda_ae)
+        # back-translation steps
+        for lang1, lang2, lang3 in shuf_order(params.bt_steps):
+            trainer.bt_step(lang1, lang2, lang3, params.lambda_bt)
 
-            # machine translation steps
-            for lang1, lang2 in shuf_order(params.mt_steps, params):
-                trainer.mt_step(lang1, lang2, params.lambda_mt)
-
-            # back-translation steps
-            for lang1, lang2, lang3 in shuf_order(params.bt_steps):
-                trainer.bt_step(lang1, lang2, lang3, params.lambda_bt)
-
-            trainer.iter()
-
-        logger.info("============ End of epoch %i ============" % trainer.epoch)
-
-        # evaluate perplexity
-        scores = evaluator.run_all_evals(trainer)
-
-        # print / JSON log
-        for k, v in scores.items():
-            logger.info("%s -> %.6f" % (k, v))
-        if params.is_master:
-            logger.info("__log__:%s" % json.dumps(scores))
-
-        # end of epoch
-        trainer.save_best_model(scores)
-        trainer.save_periodic()
-        trainer.end_epoch(scores)
+        trainer.iter()
+    logger.info("============ End of epoch %i ============" % trainer.epoch)
+    # evaluate perplexity
+    scores = evaluator.run_all_evals(trainer)
+    # print / JSON log
+    for k, v in scores.items():
+        logger.info("%s -> %.6f" % (k, v))
+    if params.is_master:
+        logger.info("__log__:%s" % json.dumps(scores))
+    # end of epoch
+    trainer.save_best_model(scores)
+    trainer.save_periodic()
+    trainer.end_epoch(scores)
 
 
 if __name__ == '__main__':
@@ -328,4 +314,6 @@ if __name__ == '__main__':
     check_model_params(params)
 
     # run experiment
-    main(params)
+    trainer, evaluator, logger = init_training(params)
+    for _ in range(params.max_epoch):
+        train(trainer, evaluator, logger, params)
