@@ -215,7 +215,10 @@ for FILENAME in $SRC/news*gz $TGT/news*gz; do
   OUTPUT="${FILENAME%???}"
   if [ ! -f "$OUTPUT" ]; then
     echo "Decompressing $FILENAME..."
-    gunzip -k $FILENAME
+    # orrp: added workaround due to gunzip -k not available on AWS linux (gunzip version 1.5, 1.6 needed...).
+    cp $FILENAME $FILENAME.bak
+    gunzip $FILENAME
+    mv $FILENAME.bak $FILENAME
   else
     echo "$OUTPUT already decompressed."
   fi
